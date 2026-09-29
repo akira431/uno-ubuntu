@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#07071a" />
+  <meta name="description"
+    content="Main UNO Truth or Dare Online Mabar Beda HP — Game kartu UNO seru real-time langsung di browser HP masing-masing tanpa instal aplikasi!" />
+  <title>UNO — Truth or Dare Edition (Mabar Beda HP)</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- PeerJS WebRTC P2P Multiplayer Library -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script>
+    if (typeof Peer === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');
+    }
+  </script>
+  <!-- Socket.io for Ubuntu VirtualBox Dedicated Server -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    if (typeof io === 'undefined') {
+      document.write('<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"><\/script>');
+    }
+  </script>
+  <!-- QRCode.js for instant mobile camera join -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+
+<body>
+
+  <!-- ░░ STARS BACKGROUND ░░ -->
+  <div id="stars" aria-hidden="true"></div>
+
+  <!-- ░░ FLOATING REACTIONS LAYER ░░ -->
+  <div id="reactions-container" aria-hidden="true"></div>
+
+  <!-- ░░░░░░░░░░░ START SCREEN ░░░░░░░░░░░ -->
+  <div id="start-screen" role="dialog" aria-label="Pengaturan Game UNO Truth or Dare">
+    <div class="logo-wrapper">
+      <div class="big-logo">UNO</div>
+      <div class="logo-subtitle">TRUTH <span class="accent-tod">OR</span> DARE</div>
+    </div>
+
+    <p class="start-desc">
+      Game kartu UNO seru dengan tantangan & kejujuran!<br>
+      Bisa <strong>Mabar Beda HP / Laptop</strong> langsung dari browser tanpa instal aplikasi.
+    </p>
+
+    <div class="setup-card">
+      <!-- MODE SELECTION -->
+      <div class="setup-group">
+        <label>Pilih Mode Permainan</label>
+        <div class="mode-grid" id="mode-buttons">
+          <button class="mode-card-btn highlight-online active" data-mode="online" id="mode-online">
+            <span class="mode-icon">📱</span>
+            <span class="mode-title">Mabar Beda HP</span>
+            <span class="mode-sub">Online Real-Time</span>
+          </button>
+          <button class="mode-card-btn" data-mode="ai" id="mode-ai">
+            <span class="mode-icon">🤖</span>
+            <span class="mode-title">Solo vs AI</span>
+            <span class="mode-sub">Lawan bot offline</span>
+          </button>
+          <button class="mode-card-btn" data-mode="pass" id="mode-pass">
+            <span class="mode-icon">👥</span>
+            <span class="mode-title">Pass & Play</span>
+            <span class="mode-sub">1 HP bergantian</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PROFIL PEMAIN -->
+      <div class="setup-group" id="player-profile-group">
+        <label>Nama & Avatar Kamu</label>
+        <div class="profile-input-row">
+          <div class="avatar-picker-trigger" id="avatar-picker-trigger" title="Pilih Avatar">
+            <span id="current-avatar-display">🧑</span>
+          </div>
+          <input type="text" id="player-name-input" class="modern-input" placeholder="Masukkan nama kamu..."
+            value="Pemain 1" maxlength="15">
+        </div>
+        <!-- Avatar Selector Tray -->
+        <div class="avatar-tray" id="avatar-tray" style="display:none;">
+          <span class="avatar-option active">🧑</span>
+          <span class="avatar-option">👧</span>
+          <span class="avatar-option">😎</span>
+          <span class="avatar-option">🐱</span>
+          <span class="avatar-option">🦊</span>
+          <span class="avatar-option">🚀</span>
+          <span class="avatar-option">👑</span>
+          <span class="avatar-option">🎮</span>
+        </div>
+      </div>
+
+      <!-- ONLINE MULTIPLAYER PANEL (DEFAULT ACTIVE UNTUK MABAR BEDA HP) -->
+      <div class="online-setup-panel" id="online-setup-panel">
+        <div class="online-subtabs">
+          <button class="online-tab-btn active" id="tab-btn-create-room">🏠 Buat Ruangan (Host)</button>
+          <button class="online-tab-btn" id="tab-btn-join-room">🚪 Gabung Ruangan</button>
+        </div>
+
+        <!-- TAB BUAT RUANGAN -->
+        <div class="online-tab-view active" id="view-create-room">
+          <p class="online-hint">Kamu akan menjadi Host dan mendapatkan <strong>Kode / QR Code</strong> untuk temanmu:
+          </p>
+          <div class="setup-group" style="margin-top:8px;">
+            <label>Kapasitas Ruangan</label>
+            <div class="count-buttons" id="online-count-buttons">
+              <button class="count-btn active" data-count="2" id="online-cap-2">2</button>
+              <button class="count-btn" data-count="3" id="online-cap-3">3</button>
+              <button class="count-btn" data-count="4" id="online-cap-4">4</button>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block btn-pulse" id="btn-create-online-room" style="margin-top:12px;">
+            🚀 Buat Ruangan & Dapatkan Kode
+          </button>
+        </div>
+
+        <!-- TAB GABUNG RUANGAN -->
+        <div class="online-tab-view" id="view-join-room">
+          <p class="online-hint">Masukkan Kode Ruangan dari HP temanmu:</p>
+          <div class="room-code-input-wrap">
+            <input type="text" id="join-room-code-input" class="room-code-input" placeholder="Contoh: UNO-8421"
+              maxlength="12">
+          </div>
+          <button class="btn btn-primary btn-block" id="btn-join-online-room" style="margin-top:12px;">
+            🔗 Masuk ke Ruangan
+          </button>
+        </div>
+
+        <!-- STATUS SERVER VIRTUALBOX / NETWORK -->
+        <div class="server-status-banner" id="server-status-banner" style="margin-top:14px;padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:12px;display:flex;align-items:center;justify-content:space-between;font-size:0.8rem;">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span class="status-dot online" id="server-status-dot"></span>
+            <span id="server-status-label" style="color:rgba(255,255,255,0.85);font-weight:600;">Server: Mendeteksi...</span>
+          </div>
+          <button type="button" id="btn-toggle-server-config" style="background:none;border:none;color:#38bdf8;cursor:pointer;font-size:0.75rem;text-decoration:underline;">
+            ⚙️ Ubah IP
+          </button>
+        </div>
+        <div id="server-config-tray" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:10px;font-size:0.8rem;">
+          <label style="display:block;margin-bottom:6px;color:rgba(255,255,255,0.7);font-size:0.75rem;">URL / IP Server VirtualBox (Kosongkan jika auto):</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="server-url-input" class="modern-input" placeholder="http://192.168.x.x:3000" style="padding:6px 10px;font-size:0.8rem;height:auto;" />
+            <button type="button" id="btn-apply-server-url" class="btn btn-secondary btn-mini">Simpan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- OFFLINE PLAYER COUNT (Untuk Solo vs AI & Pass & Play) -->
+      <div class="setup-group" id="offline-count-group" style="display:none;">
+        <label>Jumlah Pemain</label>
+        <div class="count-buttons" id="count-buttons">
+          <button class="count-btn" data-count="2" id="count-2">2</button>
+          <button class="count-btn" data-count="3" id="count-3">3</button>
+          <button class="count-btn" data-count="4" id="count-4">4</button>
+        </div>
+      </div>
+
+      <!-- TOMBOL CUSTOM 8 TRUTH & 8 DARE -->
+      <div class="tod-setup-box">
+        <div class="tod-status-text">
+          <span>📝 8 Pertanyaan & 8 Tantangan Custom</span>
+          <small id="tod-status-summary">8 Truth & 8 Dare Siap!</small>
+        </div>
+        <button class="btn btn-secondary btn-glow" id="btn-open-tod-editor">
+          ✏️ Atur 8 Pertanyaan & Tantangan
+        </button>
+      </div>
+    </div>
+
+    <!-- START GAME BUTTON (Untuk mode offline) -->
+    <button class="btn btn-primary btn-start-main" id="btn-start-game" style="display:none;">
+      🃏 Mulai Permainan Offline
+    </button>
+  </div>
+
+  <!-- ░░░░░░░░░░░ ONLINE ROOM LOBBY MODAL ░░░░░░░░░░░ -->
+  <div id="online-lobby-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Lobi Ruangan Online">
+    <div class="modal-card lobby-card">
+      <div class="lobby-header">
+        <div>
+          <h2>📱 Lobi Mabar Beda HP</h2>
+          <p class="modal-sub" id="lobby-connection-status">
+            <span class="status-dot online"></span> Ruangan Siap! Bagikan ke HP temanmu.
+          </p>
+        </div>
+        <button class="btn-close" id="btn-leave-lobby" title="Keluar Ruangan">&times;</button>
+      </div>
+
+      <!-- KODE RUANGAN & TOMBOL SHARE -->
+      <div class="room-code-badge-box">
+        <div class="code-label">KODE RUANGAN MABAR:</div>
+        <div class="code-display" id="lobby-room-code-text">UNO-XXXX</div>
+        <div class="code-actions">
+          <button class="btn btn-pill btn-copy-code" id="btn-copy-room-code">
+            📋 Salin Kode
+          </button>
+          <button class="btn btn-pill btn-share-wa" id="btn-share-wa" title="Kirim ke WhatsApp">
+            📱 Bagikan ke WA
+          </button>
+          <button class="btn btn-pill btn-toggle-qr" id="btn-toggle-qr">
+            📷 QR Code
+          </button>
+        </div>
+
+        <!-- QR CODE CONTAINER -->
+        <div class="lobby-qr-container" id="lobby-qr-container" style="display:none;">
+          <div id="qrcode-box"></div>
+          <small style="color:rgba(255,255,255,0.7);font-size:0.75rem;margin-top:6px;">Scan dengan kamera HP teman untuk
+            langsung masuk!</small>
+        </div>
+      </div>
+
+      <!-- LIST PEMAIN DI RUANGAN -->
+      <div class="lobby-players-list">
+        <label>Pemain Terhubung (<span id="lobby-players-count">1/2</span>):</label>
+        <div class="players-slots-grid" id="lobby-slots-container">
+          <!-- Generated dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- CHAT LOBBY -->
+      <div class="lobby-chat-box">
+        <div class="chat-messages-container" id="lobby-chat-messages">
+          <div class="chat-msg system">👋 Selamat datang di lobi UNO Truth or Dare! Bagikan kode atau QR ke HP temanmu.
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="lobby-chat-input" placeholder="Ketik pesan chat..." maxlength="100">
+          <button class="btn btn-secondary btn-mini" id="btn-send-chat">Kirim</button>
+        </div>
+      </div>
+
+      <div class="modal-footer lobby-footer">
+        <button class="btn btn-secondary" id="btn-lobby-add-bot" style="display:none;">
+          🤖 Tambah Bot AI
+        </button>
+        <button class="btn btn-primary btn-start-online" id="btn-start-online-game" disabled>
+          🃏 Mulai Game (Host)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░░░░░░░░░░ MAIN GAME CONTAINER ░░░░░░░░░░░ -->
+  <div id="game-container">
+
+    <!-- ── HEADER ── -->
+    <header id="header">
+      <div class="brand">
+        <div id="logo">UNO</div>
+        <span class="badge-tod-tag" id="header-mode-tag">Truth or Dare</span>
+      </div>
+
+      <div id="game-info">
+        <div class="info-badge" id="online-room-badge" style="display:none;">
+          <span id="conn-indicator-dot" class="conn-indicator-dot conn-good" title="Status koneksi"></span>
+          <span>Ruangan</span>
+          <strong id="header-room-code">—</strong>
+        </div>
+        <div class="info-badge">
+          <span>Arah</span>
+          <strong id="direction-indicator">⟳</strong>
+        </div>
+        <div class="info-badge">
+          <span>Sisa Deck</span>
+          <strong id="deck-count">—</strong>
+        </div>
+        <div class="info-badge" aria-label="Warna Aktif">
+          <span>Warna</span>
+          <div id="color-indicator" title="Warna Aktif Saat Ini"></div>
+        </div>
+        <button class="btn btn-mini btn-tod-header" id="btn-header-tod" title="Lihat 8 Pertanyaan & Tantangan">
+          📝 8 T&D
+        </button>
+        <button class="btn btn-mini btn-exit-game" id="btn-exit-game" title="Keluar dari Permainan">
+          🚪 Keluar
+        </button>
+      </div>
+    </header>
+
+    <!-- ── OPPONENTS ZONE ── -->
+    <section id="opponents-zone" aria-label="Area Lawan">
+      <!-- Diisi otomatis oleh JavaScript -->
+    </section>
+
+    <!-- ── PLAY AREA (ARENA TENGAH) ── -->
+    <section id="play-area" aria-label="Area Meja Bermain">
+
+      <!-- Deck Ambil -->
+      <div id="deck-pile" role="button" aria-label="Ambil Kartu dari Deck" tabindex="0" title="Klik untuk ambil kartu">
+        <div class="deck-stack" style="top:4px;left:4px;"></div>
+        <div class="deck-stack" style="top:2px;left:2px;"></div>
+        <div class="pile-card deck-back" id="deck-card"></div>
+      </div>
+
+      <!-- Discard Pile (Kartu Terbuang) -->
+      <div id="discard-pile" aria-label="Tumpukan Kartu Terbuka">
+        <div class="pile-card discard-card" id="top-card"></div>
+      </div>
+
+    </section>
+
+    <!-- ── PILE LABELS ── -->
+    <div id="pile-labels" aria-hidden="true">
+      <span class="pile-label">AMBIL</span>
+      <span class="pile-label">MEJA</span>
+    </div>
+
+    <!-- ── ACTION BAR ── -->
+    <div id="action-bar">
+      <button class="btn btn-ghost" id="btn-draw" aria-label="Ambil Kartu">
+        🎴 Ambil Kartu
+      </button>
+
+      <!-- ⚡ FITUR MAIN KARTU DOBEL / COMBO -->
+      <button class="btn btn-combo" id="btn-combo-mode" title="Pilih beberapa kartu kembar untuk dikeluarkan sekaligus">
+        ⚡ Main Kartu Dobel / Combo
+      </button>
+      <button class="btn btn-combo-play" id="btn-play-combo" style="display:none;"
+        title="Keluarkan semua kartu kembar yang dipilih">
+        🔥 Keluarkan (2) Kartu Kembar!
+      </button>
+      <button class="btn btn-ghost btn-mini" id="btn-cancel-combo" style="display:none;" title="Batal memilih combo">
+        ✖ Batal
+      </button>
+
+      <button class="btn btn-tod-trigger" id="btn-manual-tod" aria-label="Buka Tantangan Truth or Dare">
+        🔥 Truth or Dare!
+      </button>
+      <button class="btn btn-danger" id="btn-uno" style="display:none;" aria-label="Teriak UNO!">
+        🔴 UNO!
+      </button>
+
+      <!-- LIVE EMOJI REACTIONS (Online) -->
+      <div class="reaction-bar" id="reaction-bar">
+        <button class="btn-emoji-reaction" data-emoji="🔥" title="Kirim Reaksi Api">🔥</button>
+        <button class="btn-emoji-reaction" data-emoji="🤣" title="Kirim Reaksi Ketawa">🤣</button>
+        <button class="btn-emoji-reaction" data-emoji="😱" title="Kirim Reaksi Kaget">😱</button>
+        <button class="btn-emoji-reaction" data-emoji="🃏" title="Kirim Reaksi Kartu">🃏</button>
+        <button class="btn-emoji-reaction" data-emoji="👏" title="Kirim Reaksi Tepuk Tangan">👏</button>
+      </div>
+    </div>
+
+    <!-- ── PLAYER HAND ── -->
+    <section id="player-area" aria-label="Kartu di Tanganmu">
+      <div id="player-label-row">
+        <div class="player-label" id="human-player-label">
+          <span class="avatar" id="human-avatar">🧑</span>
+          <span id="human-name">Kamu</span>
+          <span class="uno-badge" id="human-uno-badge">UNO!</span>
+        </div>
+        <span class="turn-hint" id="turn-hint">Giliranmu! Klik kartu yang cocok atau ambil dari deck.</span>
+      </div>
+      <div id="hand-container" role="list" aria-label="Daftar Kartu">
+        <!-- Kartu di-render oleh JavaScript -->
+      </div>
+    </section>
+
+  </div><!-- end game-container -->
+
+  <!-- ░░░░ MODAL: EDITOR 8 TRUTH & 8 DARE ░░░░ -->
+  <div id="tod-editor-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Editor 8 Truth & 8 Dare">
+    <div class="modal-card tod-editor-box">
+      <div class="modal-header">
+        <div>
+          <h2>📝 Atur 8 Truth & 8 Dare</h2>
+          <p class="modal-sub">Kustomisasi 8 pertanyaan kejujuran dan 8 tantangan. (Tersinkron otomatis ke semua HP
+            pemain!)</p>
+        </div>
+        <button class="btn-close" id="btn-close-tod-editor" aria-label="Tutup">&times;</button>
+      </div>
+
+      <!-- TAB PILIHAN -->
+      <div class="modal-tabs">
+        <button class="tab-btn active" id="tab-btn-truth" data-tab="truth">
+          🧠 8 Pertanyaan (Truth)
+        </button>
+        <button class="tab-btn" id="tab-btn-dare" data-tab="dare">
+          🔥 8 Tantangan (Dare)
+        </button>
+      </div>
+
+      <!-- PRESET ACTIONS -->
+      <div class="preset-bar">
+        <span>💡 Preset Cepat:</span>
+        <button class="btn btn-pill" id="btn-preset-fun">🎉 Seru & Gaul</button>
+        <button class="btn btn-pill" id="btn-preset-spicy">🌶️ Kocak & Gokil</button>
+        <button class="btn btn-pill" id="btn-preset-reset">🔄 Reset Default</button>
+      </div>
+
+      <!-- CONTENT TAB TRUTH (8 INPUTS) -->
+      <div class="tab-content active" id="tab-content-truth">
+        <div class="inputs-grid" id="truth-inputs-container">
+          <!-- 8 Inputs generated dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- CONTENT TAB DARE (8 INPUTS) -->
+      <div class="tab-content" id="tab-content-dare">
+        <div class="inputs-grid" id="dare-inputs-container">
+          <!-- 8 Inputs generated dynamically by JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btn-cancel-tod">Batal</button>
+        <button class="btn btn-primary" id="btn-save-tod">💾 Simpan 8 Pertanyaan & Tantangan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░░░ MODAL: TRUTH OR DARE GAMEPLAY POPUP ░░░░ -->
+  <div id="tod-popup-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Tantangan Truth or Dare">
+    <div class="modal-card tod-play-card">
+      <div class="tod-card-badge" id="tod-card-badge">🎭 UNO TRUTH OR DARE</div>
+
+      <div class="tod-target-banner">
+        <span class="avatar-large" id="tod-target-avatar">🧑</span>
+        <div>
+          <h3 id="tod-target-name">Giliran Kamu!</h3>
+          <p id="tod-trigger-reason">Kena efek kartu spesial!</p>
+        </div>
+      </div>
+
+      <!-- STEP 1: PILIH TRUTH ATAU DARE -->
+      <div id="tod-choice-step" class="tod-step">
+        <p class="tod-prompt-text" id="tod-choice-prompt-text">Pilih salah satu untuk membuktikan keberanianmu:</p>
+        <div class="tod-choice-buttons">
+          <button class="btn-tod-choice truth-choice" id="btn-choose-truth">
+            <span class="choice-icon">🧠</span>
+            <span class="choice-title">JUJUR (TRUTH)</span>
+            <span class="choice-sub">Jawab 1 dari 8 pertanyaan rahasia!</span>
+          </button>
+          <button class="btn-tod-choice dare-choice" id="btn-choose-dare">
+            <span class="choice-icon">🔥</span>
+            <span class="choice-title">TANTANGAN (DARE)</span>
+            <span class="choice-sub">Lakukan 1 dari 8 tantangan gokil!</span>
+          </button>
+        </div>
+        <!-- Spectator waiting text in Online Mode -->
+        <div class="spectator-wait-msg" id="spectator-wait-msg" style="display:none;">
+          <span class="pulse-icon">⏳</span> Menunggu pemain memilih Truth atau Dare...
+        </div>
+      </div>
+
+      <!-- STEP 2: TAMPILKAN HASIL ACAKAN DARI 8 ITEM -->
+      <div id="tod-result-step" class="tod-step" style="display:none;">
+        <div class="tod-type-pill" id="tod-type-pill">🧠 TRUTH #1</div>
+
+        <div class="tod-prompt-box">
+          <div class="roulette-spin" id="roulette-spinner" style="display:none;">
+            <span class="spin-text">🎲 Mengacak dari 8 pilihan...</span>
+          </div>
+          <p class="tod-question-content" id="tod-question-content">
+            "Pertanyaan / Tantangan muncul di sini"
+          </p>
+        </div>
+
+        <!-- TIMER & STATUS -->
+        <div class="tod-timer-wrap" id="tod-timer-wrap">
+          <div class="timer-bar">
+            <div class="timer-fill" id="timer-fill"></div>
+          </div>
+          <span class="timer-text" id="timer-text">⏱️ 30 detik</span>
+        </div>
+
+        <!-- RESPON AI (JIKA BOT YG KENA) -->
+        <div class="ai-response-box" id="ai-response-box" style="display:none;">
+          <span class="ai-speech-bubble" id="ai-speech-bubble">🤖 AI sedang menjawab...</span>
+        </div>
+
+        <!-- TOMBOL AKSI HUMAN -->
+        <div class="tod-action-buttons" id="human-tod-actions">
+          <button class="btn btn-danger btn-forfeit" id="btn-tod-forfeit" title="Menyerah dan ambil kartu penalti">
+            ❌ Menyerah (+Kartu Penalti)
+          </button>
+          <button class="btn btn-success btn-complete" id="btn-tod-complete"
+            title="Saya sudah melakukan / menjawabnya!">
+            ✅ Sudah Dilakukan / Dijawab!
+          </button>
+        </div>
+
+        <!-- TOMBOL LANJUT BOT / SPECTATOR -->
+        <div class="tod-action-buttons" id="bot-tod-actions" style="display:none;">
+          <button class="btn btn-primary" id="btn-bot-continue">
+            Lanjut Bermain ➔
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░░░ COLOR PICKER MODAL ░░░░ -->
+  <div id="color-picker" class="modal-overlay" role="dialog" aria-label="Pilih Warna Kartu Wild" aria-modal="true">
+    <div class="color-picker-box">
+      <h3>🎨 Pilih Warna Kartu</h3>
+      <p style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-bottom:18px;">Pilih warna yang ingin kamu gunakan
+        selanjutnya:</p>
+      <div class="color-swatches">
+        <button type="button" class="color-swatch red" data-color="red" aria-label="Merah" id="swatch-red">🔴
+          Merah</button>
+        <button type="button" class="color-swatch blue" data-color="blue" aria-label="Biru" id="swatch-blue">🔵
+          Biru</button>
+        <button type="button" class="color-swatch green" data-color="green" aria-label="Hijau" id="swatch-green">🟢
+          Hijau</button>
+        <button type="button" class="color-swatch yellow" data-color="yellow" aria-label="Kuning" id="swatch-yellow">🟡
+          Kuning</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░░░ TOAST CONTAINER ░░░░ -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ░░░░ WINNER SCREEN ░░░░ -->
+  <div id="winner-screen" class="modal-overlay" role="dialog" aria-label="Permainan Selesai" aria-modal="true">
+    <div class="modal-card winner-card">
+      <div class="trophy" aria-hidden="true">🏆</div>
+      <h1 id="winner-name">Kamu Menang!</h1>
+      <p id="winner-subtitle">Selamat! Kamu berhasil mengalahkan semua lawan di UNO Truth or Dare!</p>
+
+      <div class="score-list" id="score-list">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- AKSI HOST ONLINE (TETAP DI ROOM / BALIK KE LOBI) -->
+      <div id="winner-actions-online-host" style="display:none;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center;width:100%;">
+        <button class="btn btn-primary btn-pulse" id="btn-return-lobby-host" style="flex:1;min-width:200px;">
+          🏠 Kembali ke Lobi (Babak Baru)
+        </button>
+        <button class="btn btn-secondary" id="btn-quick-rematch-host" style="flex:1;min-width:180px;">
+          ⚡ Langsung Gas Babak Baru
+        </button>
+        <button class="btn btn-secondary" id="btn-edit-tod-postgame">
+          📝 Edit Truth & Dare
+        </button>
+      </div>
+
+      <!-- AKSI GUEST ONLINE (TETAP DI ROOM & MENUNGGU HOST) -->
+      <div id="winner-actions-online-guest" style="display:none;flex-direction:column;align-items:center;gap:12px;margin-top:16px;width:100%;">
+        <div class="waiting-host-notice" style="background:rgba(255,255,255,0.06);border:1px solid rgba(56,189,248,0.3);border-radius:12px;padding:12px 16px;font-size:0.88rem;color:#7dd3fc;display:flex;align-items:center;gap:10px;width:100%;justify-content:center;text-align:center;">
+          <span style="font-size:1.3rem;display:inline-block;animation:trophy-bounce 1s infinite alternate;">⏳</span>
+          <span>Pemain tetap di room! Menunggu Host memulai babak berikutnya...</span>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;width:100%;">
+          <button class="btn btn-secondary" id="btn-view-lobby-guest">
+            🏠 Buka Lobi Ruangan
+          </button>
+          <button class="btn btn-danger btn-mini" id="btn-leave-room-postgame">
+            🚪 Keluar Ruangan
+          </button>
+        </div>
+      </div>
+
+      <!-- AKSI OFFLINE -->
+      <div id="winner-actions-offline" style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center;width:100%;">
+        <button class="btn btn-secondary" id="btn-edit-tod-postgame-offline">
+          📝 Edit 8 Pertanyaan & Tantangan
+        </button>
+        <button class="btn btn-primary" id="btn-new-game">
+          🔄 Main Lagi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░░░ EXIT GAME CONFIRMATION MODAL ░░░░ -->
+  <div id="exit-confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Konfirmasi Keluar">
+    <div class="modal-card exit-confirm-card">
+      <div class="exit-confirm-icon">🚪</div>
+      <h2>Keluar dari Permainan?</h2>
+      <p class="exit-confirm-desc">Progres permainan saat ini akan hilang. Apakah kamu yakin ingin keluar?</p>
+      <div class="exit-confirm-actions">
+        <button class="btn btn-secondary" id="btn-cancel-exit">✖ Batal</button>
+        <button class="btn btn-danger" id="btn-confirm-exit">🚪 Ya, Keluar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+
+</html>
